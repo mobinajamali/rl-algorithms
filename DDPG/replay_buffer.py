@@ -1,39 +1,41 @@
 import numpy as np
 
 class Replay():
-    def __init__(self, mem_size, input_dims, n_actions):
-        self.mem_size = mem_size
+    '''
+    plays critical role in off-policy learning, allowing 
+    the agent to sample past experiences to learn from them
+    '''
+    def __init__(self, max_size, input_shape, n_actions):
+        self.mem_size = max_size
         self.mem_ctr = 0
-
-        self.state_mem = np.zeros((self.mem_size, *input_dims))
-        self.new_state_mem = np.zeros((self.mem_size, *input_dims))
-        self.action_mem = np.zeros((self.mem_size, n_actions))
-        self.reward_mem = np.zeros(self.mem_size)
-        self.done_mem = np.zeros(self.mem_size, dtype=np.bool)
+        self.state_memory = np.zeros((self.mem_size, *input_shape))
+        self.new_state_memory = np.zeros((self.mem_size, *input_shape))
+        self.action_memory = np.zeros((self.mem_size, n_actions))
+        self.reward_memory = np.zeros(self.mem_size)
+        self.terminal_memory = np.zeros(self.mem_size, dtype=bool)
 
     def store_transitions(self, state, action, reward, state_, done):
-        '''
-        Store a transition in the replay buffer
-        '''
-        # Calculate the index where the new transition should be stored 
+        # Determine the index to store the new transition
         index = self.mem_ctr % self.mem_size
-        self.state_mem[index] = state
-        self.new_state_mem[index] = state_
-        self.action_mem[index] = action
-        self.reward_mem[index] = reward
-        self.done_mem[index] = done
+        self.state_memory[index] = state
+        self.action_memory[index] = action
+        self.reward_memory[index] = reward
+        self.new_state_memory[index] = state_
+        self.terminal_memory[index] = done
+
         self.mem_ctr += 1
 
     def sample_buffer(self, batch_size):
-        '''
-        Sample a batch of transitions from the replay buffer
-        '''
-        # Calculate the number of transitions available for sampling
-        num = min(self.mem_ctr, self.mem_size)
-        batch = np.random.choice(num, batch_size, replace=False)
-        state = self.state_mem[batch] 
-        state_ = self.new_state_mem[batch] 
-        action = self.action_mem[batch] 
-        reward = self.reward_mem[batch] 
-        done = self.done_mem[batch] 
-        return state, action, reward, state_, done
+        # Ensure we don't sample more than we've stored
+        max_mem = min(self.mem_ctr, self.mem_size)
+        batch = np.random.choice(max_mem, batch_size)
+
+        states = self.state_memory[batch]
+        actions = self.action_memory[batch]
+        rewards = self.reward_memory[batch]
+        states_ = self.new_state_memory[batch]
+        dones = self.terminal_memory[batch]
+
+        return states, actions, rewards, states_, dones
+
+
